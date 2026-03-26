@@ -1,0 +1,23 @@
+# VSCode
+.vscode/
+*.code-workspace
+
+# 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.cache
+.ipynb_checkpoints/
+
+# 特定文件夹示例
+datasets/
+
+# 其他
+.env
+.DS_Store
+*.log
