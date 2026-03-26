@@ -19,11 +19,11 @@ from mediapipe.tasks.python.vision import drawing_styles
 MODEL_PATH = "./models/pose_landmarker_full.task"
 BASE_OPTIONS = python.BaseOptions(model_asset_path=MODEL_PATH)
 # 是否生成带关键点的可视化图
-DRAW_ANNOTATED = False
+DRAW_ANNOTATED = True
 ANNOTATED_DIR = "./features/images"
 FEATURES_DIR = "./features"
 TARGET_FEATURES_DIR = "./target_features"
-TARGET_ANNOTATED_DIR = "./features/images"
+TARGET_ANNOTATED_DIR = "./target_features/images"
 
 
 def extract_features_from_image(image_path):
@@ -102,15 +102,15 @@ def extract_features_from_video(video_path):
         if not result.pose_landmarks:
             print(f"未检测出人体:{timestamp_ms}")
             continue
-        landmarks = result.pose_landmarks[0]
-        feature_vector = []
-        for landmark in landmarks:
-            feature_vector.append(
-                [landmark.x, landmark.y, landmark.z, landmark.visibility]
-            )
-        feature_vector = np.array(feature_vector, dtype=np.float32).flatten()
-        npy_path = os.path.join(save_path, f"frame_{frame_count:06d}.npy")
-        np.save(npy_path, feature_vector)
+        # landmarks = result.pose_landmarks[0]
+        # feature_vector = []
+        # for landmark in landmarks:
+        #     feature_vector.append(
+        #         [landmark.x, landmark.y, landmark.z, landmark.visibility]
+        #     )
+        # feature_vector = np.array(feature_vector, dtype=np.float32).flatten()
+        # npy_path = os.path.join(save_path, f"frame_{frame_count:06d}.npy")
+        # np.save(npy_path, feature_vector)
 
         if DRAW_ANNOTATED:
             annotated = draw_landmarks_on_image(mp_image.numpy_view(), result)
@@ -172,4 +172,7 @@ def process_images(image_path):
 
 
 if __name__ == "__main__":
-    process_images("./datasets/action_frames/action5_815.jpg")
+    # process_images("./datasets/action_frames/action5_815.jpg")
+    extract_features_from_video(
+        "./datasets/baduanjian_action_videos/test_action1&2-1.mp4"
+    )

@@ -127,5 +127,7 @@ class BaduanjinScorer:
 
 
 if __name__ == "__main__":
-    scorer = BaduanjinScorer(feature_path="./target_features/test_action1&2-1")
+    scorer = BaduanjinScorer(
+        feature_path="./target_features/test_action1&2-1", window_size=300
+    )
     scorer.extract_score()

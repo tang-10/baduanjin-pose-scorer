@@ -2,7 +2,8 @@ import os
 import numpy as np
 import chromadb
 from chromadb.utils import embedding_functions
-from tqdm import tqdm
+import sys
+
 
 # 数据库持久化文件夹
 CHROMA_DB_PATH = "./chroma_db"
@@ -18,6 +19,8 @@ BADUANJIN_MAPPING = {
     "action7": "攒拳怒目增气力",
     "action8": "背后七颠百病消",
 }
+# print 输出重定向到日志文件
+sys.stdout = open("log.txt", "a")
 
 # 初始化Chroma
 client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
@@ -53,12 +56,12 @@ def query_similar_poses(query_vector_path, top_k=5):
         n_results=top_k,
         include=["metadatas", "distances"],  # 返回元数据和相似度
     )
-    print(f"查询结果(Top-{top_k}):")
+    print(f"{os.path.basename(query_vector_path)}的查询结果(Top-{top_k}):")
     for i in range(len(results["ids"][0])):
         meta = results["metadatas"][0][i]
         distance = results["distances"][0][i]
         similarity = 1 - distance  # 余弦距离转相似度
-        print(f"{i + 1}. {meta['pose_name']} | 相似度: {similarity:.4f})")
+        print(f"{i + 1}. {meta['pose_name']} | 相似度: {similarity:.4f}")
 
     # 返回top1的pose_name和similarity
     if not results["metadatas"][0]:
