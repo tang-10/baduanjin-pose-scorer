@@ -60,18 +60,23 @@ def query_similar_poses(query_vector_path, top_k=5):
         similarity = 1 - distance  # 余弦距离转相似度
         print(f"{i + 1}. {meta['pose_name']} | 相似度: {similarity:.4f})")
 
+    # 返回top1的pose_name和similarity
+    if not results["metadatas"][0]:
+        return None, 0.0
+    else:
+        return results["metadatas"][0][0]["pose_name"], 1 - results["distances"][0][0]
+
 
 if __name__ == "__main__":
-    # 批量入库
-    fetures_dir = "./features"
-    for file in tqdm(os.listdir(fetures_dir)):
-        if file.endswith(".npy"):
-            vector_path = os.path.join(fetures_dir, file)
-            pose_name = BADUANJIN_MAPPING[os.path.splitext(file)[0].split("_")[0]]
-            add_pose_to_chroma(vector_path, pose_name)
+    # # 批量入库
+    # fetures_dir = "./features"
+    # for file in tqdm(os.listdir(fetures_dir)):
+    #     if file.endswith(".npy"):
+    #         vector_path = os.path.join(fetures_dir, file)
+    #         pose_name = BADUANJIN_MAPPING[os.path.splitext(file)[0].split("_")[0]]
+    #         add_pose_to_chroma(vector_path, pose_name)
 
-    # # 测试查询
-    # test_query = "./features/action1_1.npy"
-    # if os.path.exists(test_query):
-    #     query_similar_poses(test_query, top_k=3)
-    print(len(collection))
+    # 测试查询
+    test_query = "./features/action1_1.npy"
+    if os.path.exists(test_query):
+        query_similar_poses(test_query, top_k=3)

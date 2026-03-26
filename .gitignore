@@ -14,8 +14,9 @@ __pycache__/
 .cache
 .ipynb_checkpoints/
 
-# 特定文件夹示例
+# 不上传特定文件夹
 datasets/
+target_features/
 
 # 其他
 .env

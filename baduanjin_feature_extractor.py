@@ -2,6 +2,12 @@ import os
 import cv2
 import numpy as np
 from tqdm import tqdm
+import warnings
+
+os.environ["GLOG_minloglevel"] = "3"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["ABSL_LOGGING_VERBOSITY"] = "3"
+warnings.filterwarnings("ignore")
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
@@ -16,9 +22,12 @@ BASE_OPTIONS = python.BaseOptions(model_asset_path=MODEL_PATH)
 DRAW_ANNOTATED = False
 ANNOTATED_DIR = "./features/images"
 FEATURES_DIR = "./features"
+TARGET_FEATURES_DIR = "./target_features"
+TARGET_ANNOTATED_DIR = "./features/images"
 
 
 def extract_features_from_image(image_path):
+    """从图像中提取132维特征向量"""
     # 默认running_mode是单张图片输入
     options = vision.PoseLandmarkerOptions(base_options=BASE_OPTIONS)
     detector = vision.PoseLandmarker.create_from_options(options)
@@ -36,7 +45,7 @@ def extract_features_from_image(image_path):
         feature_vector.append([landmark.x, landmark.y, landmark.z, landmark.visibility])
     feature_vector = np.array(feature_vector, dtype=np.float32).flatten()
 
-    # 生成带关键点的可视化图
+    # 可选择生成带关键点的可视化图
     if DRAW_ANNOTATED:
         annotated = draw_landmarks_on_image(mp_image.numpy_view(), result)
         save_path = os.path.join(
@@ -46,6 +55,77 @@ def extract_features_from_image(image_path):
         cv2.imwrite(save_path, cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
         print(f"已保存可视化图: {save_path}")
     return feature_vector
+
+
+def extract_features_from_video(video_path):
+    """从视频中逐帧提取132维特征向量"""
+    if not os.path.exists(TARGET_FEATURES_DIR):
+        os.makedirs(TARGET_FEATURES_DIR)
+    if DRAW_ANNOTATED:
+        if not os.path.exists(TARGET_ANNOTATED_DIR):
+            os.makedirs(TARGET_ANNOTATED_DIR)
+
+    options = vision.PoseLandmarkerOptions(
+        base_options=BASE_OPTIONS,
+        running_mode=vision.RunningMode.VIDEO,  # VIDEO 模式
+    )
+    detector = vision.PoseLandmarker.create_from_options(options)
+
+    cap = cv2.VideoCapture(video_path)
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frame_count = 0
+    pbar = tqdm(desc="Processing frames", unit="frame")
+
+    # 创建目标视频的特征向量存储文件夹
+    video_name = os.path.splitext(os.path.basename(video_path))[0]
+    save_path = os.path.join(TARGET_FEATURES_DIR, video_name)
+    os.makedirs(save_path, exist_ok=True)
+
+    # 读取目标视频
+    print(f"开始处理视频：{video_path}")
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # 转为mp_image
+        mp_image = mp.Image(
+            image_format=mp.ImageFormat.SRGB,
+            data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
+        )
+
+        # video模式必须传入时间戳
+        timestamp_ms = int(frame_count * (1000 / fps))
+
+        result = detector.detect_for_video(mp_image, timestamp_ms)
+
+        if not result.pose_landmarks:
+            print(f"未检测出人体:{timestamp_ms}")
+            continue
+        landmarks = result.pose_landmarks[0]
+        feature_vector = []
+        for landmark in landmarks:
+            feature_vector.append(
+                [landmark.x, landmark.y, landmark.z, landmark.visibility]
+            )
+        feature_vector = np.array(feature_vector, dtype=np.float32).flatten()
+        npy_path = os.path.join(save_path, f"frame_{frame_count:06d}.npy")
+        np.save(npy_path, feature_vector)
+
+        if DRAW_ANNOTATED:
+            annotated = draw_landmarks_on_image(mp_image.numpy_view(), result)
+            jpg_path = os.path.join(
+                TARGET_ANNOTATED_DIR, f"frame_{frame_count:06d}_annotated.jpg"
+            )
+            cv2.imwrite(jpg_path, cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
+
+        frame_count += 1
+        pbar.update(1)
+        pbar.set_description(f"Frame {frame_count:06d}")  # 动态更新描述
+
+    pbar.close()
+    cap.release()
+    return save_path
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
@@ -68,9 +148,11 @@ def draw_landmarks_on_image(rgb_image, detection_result):
 
 
 def process_images(image_path):
-    os.makedirs(FEATURES_DIR, exist_ok=True)
+    if not os.path.exists(FEATURES_DIR):
+        os.makedirs(FEATURES_DIR)
     if DRAW_ANNOTATED:
-        os.makedirs(ANNOTATED_DIR, exist_ok=True)
+        if not os.path.exists(ANNOTATED_DIR):
+            os.makedirs(ANNOTATED_DIR)
 
     if os.path.isfile(image_path):
         files = [image_path]
@@ -90,4 +172,4 @@ def process_images(image_path):
 
 
 if __name__ == "__main__":
-    process_images("./datasets/action_frames")
+    process_images("./datasets/action_frames/action5_815.jpg")
